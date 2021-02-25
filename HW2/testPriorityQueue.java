@@ -14,11 +14,11 @@ public class testPriorityQueue implements Runnable {
         while(true) {
             Random rand = new Random();
             int rand_int = rand.nextInt(1000);
-            if (rand_int < 500) {
+            if (rand_int < 900) {
                 int pri = rand.nextInt(10);
                 String name = "sam" + pri;
-                queue.add(name, pri);
-                System.out.println("Added " + name);
+                int i = queue.add(name, pri);
+                System.out.println("Added " + name + " position " + i);
             } else {
                 String pop =  queue.getFirst();
                 System.out.println("Popped " + pop);

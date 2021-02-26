@@ -1,6 +1,7 @@
 /*
  * EID's of group members
- * 
+ * eyl283
+ * rch2777
  */
 
 public class MonitorCyclicBarrier {

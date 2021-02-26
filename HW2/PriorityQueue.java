@@ -1,9 +1,8 @@
-//import java.util.concurrent.*;
+// eyl283
+// rch2777
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-// EID 1
-// EID 2
 
 public class PriorityQueue {
 	AtomicInteger size;
@@ -28,79 +27,78 @@ public class PriorityQueue {
 
 		Node newNode = new Node(name, priority);
 
-//		// Check is full
-//		monitorLock.lock();
-//		try {
-//			size.getAndIncrement();
-//			while (size.get() >= maxSize) {
-//				notFull.await();
-//			}
-//		} catch(Exception e) {
-//			e.printStackTrace();
-//		} finally {
-//			monitorLock.unlock();
-//		}
-
-		int position = -1;
 		while (true) {
-				position = -1;
-				Node currentNode = head;
-				while (currentNode.next != null && currentNode.next.priority >= priority) {
-					position++;
-					currentNode = currentNode.next;
+
+			// Check is full
+			monitorLock.lock();
+			try {
+				while (size.get() >= maxSize) {
+//					System.out.println(name + " is waiting with size" + size.get());
+					notFull.await();
 				}
+			} catch(Exception e) {
+				e.printStackTrace();
+			} finally {
+				monitorLock.unlock();
+			}
+
+			int position = -1;
+			Node currentNode = head;
+			while (currentNode.next != null && currentNode.next.priority >= priority) {
 				position++;
+				currentNode = currentNode.next;
+			}
+			position++;
 
-				Node pred = currentNode;
-				pred.lock.lock();
-				Node succ = pred.next;
+			Node pred = currentNode;
+			pred.lock.lock();
+			Node succ = pred.next;
+			if (pred.isDeleted.get()) {
+				pred.lock.unlock();
+				continue;
+			}
 
-//				String succName;
-//				if (succ == null) {
-//					succName = "null";
-//				} else {
-//					succName = succ.name;
-//				}
-//				System.out.println("prio " + priority + " pred " + pred.name + " succ " + succName);
-
-				if (pred.isDeleted.get()) {
+			if (succ == null) {
+				if (search(name) != -1) {
+					pred.lock.unlock();
+					return -1;
+				}
+				if (size.incrementAndGet() > maxSize) {
+					pred.lock.unlock();
+					size.getAndDecrement();
+					continue;
+				}
+				// Adding to last node in the list
+				pred.next = newNode;
+			} else {
+				succ.lock.lock();
+				if (succ.isDeleted.get() || priority > pred.priority || priority < succ.priority) {
+					succ.lock.unlock();
 					pred.lock.unlock();
 					continue;
 				}
-				if (succ == null) {
-					if (search(name) != -1) {
-						pred.lock.unlock();
-						return -1;
-					}
-					// Adding to last node in the list
-					pred.next = newNode;
-//					System.out.println("Added " + name + " at " + position + " is before null");
-				} else {
-					succ.lock.lock();
-					if (succ.isDeleted.get() || pred.next != succ || priority < succ.priority || priority > pred.priority) {
-						succ.lock.unlock();
-						pred.lock.unlock();
-						continue;
-					}
-					if (search(name) != -1) {
-						succ.lock.unlock();
-						pred.lock.unlock();
-						return -1;
-					}
-					newNode.next = succ;
-					pred.next = newNode;
-					if (priority < succ.priority) {
-						System.out.println("Added " + name + " at " + position + " is before " + succ.name);
-					}
+				if (search(name) != -1) {
 					succ.lock.unlock();
+					pred.lock.unlock();
+					return -1;
 				}
-				pred.lock.unlock();
-				break;
-//			}
+				if (size.incrementAndGet() > maxSize) {
+					succ.lock.unlock();
+					pred.lock.unlock();
+					size.getAndDecrement();
+					continue;
+				}
+				newNode.next = succ;
+				pred.next = newNode;
+				succ.lock.unlock();
+			}
+			pred.lock.unlock();
+//			System.out.println("Added " + name);
+			monitorLock.lock();
+			notEmpty.signal();
+			monitorLock.unlock();
+			return position;
 		}
-		// Signal not empty
-		size.getAndIncrement();
-		return position;
 	}
 
 	public int search(String name) {
@@ -122,56 +120,60 @@ public class PriorityQueue {
 		return -1;
 	}
 
+	public String getFirst() {
+		// Retrieves and removes the name with the highest priority in the list,
+		// or blocks the thread if the list is empty.
+		while (true) {
+			monitorLock.lock();
+			try {
+				while (size.get() <= 0) {
+//					System.out.println("Pop is waiting with size" + size.get());
+					notEmpty.await();
+				}
+			} catch(Exception e) {
+				e.printStackTrace();
+			} finally {
+				monitorLock.unlock();
+			}
+
+
+			head.lock.lock();
+			Node curr = head.next;
+			if (head.next == null) {
+				head.lock.unlock();
+				continue;
+			}
+			String pop = curr.name;
+
+			curr.lock.lock();
+
+			if (curr.isDeleted.get() || head.next != curr) {
+				curr.lock.unlock();
+				head.lock.unlock();
+				continue;
+			}
+
+			size.getAndDecrement();
+			curr.isDeleted.set(true);
+			head.next = curr.next;
+			curr.lock.unlock();
+			head.lock.unlock();
+
+//			System.out.println("Pop " + pop);
+			monitorLock.lock();
+			notFull.signal();
+			monitorLock.unlock();
+			return pop;
+		}
+	}
+
 	public synchronized void printQueue() {
-		// Returns the position of the name in the list;
-		// otherwise, returns -1 if the name is not found.
 		Node currentNode = head.next;
 		while (currentNode != null) {
 			System.out.print(currentNode.name + " ");
 			currentNode = currentNode.next;
 		}
 		System.out.println("");
-	}
-
-	public String getFirst() {
-		// Retrieves and removes the name with the highest priority in the list,
-		// or blocks the thread if the list is empty.
-
-//		monitorLock.lock();
-//		try {
-//			while (size.get() == 0) {
-//				notEmpty.await();
-//			}
-//		} catch(Exception e) {
-//			e.printStackTrace();
-//		} finally {
-//			monitorLock.unlock();
-//		}
-
-		String pop;
-
-		while (true) {
-			Node prev = head;
-			Node curr = head.next;
-			pop = curr.name;
-
-			prev.lock.lock();
-			curr.lock.lock();
-
-			if (curr.isDeleted.get() || prev.next != curr) {
-				curr.lock.unlock();
-				prev.lock.unlock();
-				continue;
-			}
-
-			curr.isDeleted.set(true);
-			prev.next = curr.next;
-			curr.lock.unlock();
-			prev.lock.unlock();
-			break;
-		}
-		size.getAndDecrement();
-		return pop;
 	}
 }
 
@@ -189,16 +191,4 @@ class Node {
 		this.lock = new ReentrantLock();
 		this.next = null;
 	}
-
-//	public void setNext(Node next) {
-//		this.next = next;
-//	}
-//
-//	public int getPriority() {
-//		return priority;
-//	}
-//
-//	public String getName() {
-//		return name;
-//	}
 }

@@ -1,5 +1,5 @@
-// EID 1
-// EID 2
+// eyl283
+// rch2777
 import java.util.concurrent.locks.*;
 import java.util.Random;
 
@@ -13,31 +13,32 @@ public class FairUnifanBathroom {
     int ticketNumber=0, nextTicket=0, count=0;
     boolean utInside=false, ouInside=false;
 
-    public static void main(String[] args) {
-        FairUnifanBathroom bathroom = new FairUnifanBathroom();
-
-        for (int i = 0; i < 25; i++) {
-            new Thread(() -> { // Create UT Thread
-                try {
-                    bathroom.enterBathroomUT();
-                    Thread.sleep(new Random().nextInt(500));
-                    bathroom.leaveBathroomUT();
-                } catch(Exception e) {
-                    e.printStackTrace();
-                }
-            }).start();
-
-            new Thread(() -> { // Create OU Thread
-                try {
-                    bathroom.enterBathroomOU();
-                    Thread.sleep(new Random().nextInt(500));
-                    bathroom.leaveBathroomOU();
-                } catch(Exception e) {
-                    e.printStackTrace();
-                }
-            }).start();
-        }
-    }
+    /**************** FOR TESTING **********************/
+//    public static void main(String[] args) {
+//        FairUnifanBathroom bathroom = new FairUnifanBathroom();
+//
+//        for (int i = 0; i < 25; i++) {
+//            new Thread(() -> { // Create UT Thread
+//                try {
+//                    bathroom.enterBathroomUT();
+//                    Thread.sleep(new Random().nextInt(500));
+//                    bathroom.leaveBathroomUT();
+//                } catch(Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }).start();
+//
+//            new Thread(() -> { // Create OU Thread
+//                try {
+//                    bathroom.enterBathroomOU();
+//                    Thread.sleep(new Random().nextInt(500));
+//                    bathroom.leaveBathroomOU();
+//                } catch(Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }).start();
+//        }
+//    }
 
     public void enterBathroomUT() throws InterruptedException{
         // Called when a UT fan wants to enter bathroom
@@ -46,7 +47,7 @@ public class FairUnifanBathroom {
             // Assign ticket number
             int myTicket = ticketNumber;
             ticketNumber++;
-            System.out.println("UT-" + myTicket);
+            //System.out.println("UT-" + myTicket);
 
             while (nextTicket != myTicket) {
                 nextInLine.await();
@@ -64,7 +65,7 @@ public class FairUnifanBathroom {
                 }
             }
             // enter bathroom
-            System.out.println("UT-" + myTicket + " entered bathroom");
+            //System.out.println("UT-" + myTicket + " entered bathroom");
             if (count == 0) {
                 utInside = true;
             }
@@ -83,7 +84,7 @@ public class FairUnifanBathroom {
             // Assign ticket number
             int myTicket = ticketNumber;
             ticketNumber++;
-            System.out.println("OU-" + myTicket);
+            //System.out.println("OU-" + myTicket);
 
             while (nextTicket != myTicket) {
                 nextInLine.await();
@@ -104,7 +105,7 @@ public class FairUnifanBathroom {
             if (count == 0) {
                 ouInside = true;
             }
-            System.out.println("OU-" + myTicket + " entered bathroom");
+            //System.out.println("OU-" + myTicket + " entered bathroom");
             count++;
             nextTicket++;
             nextInLine.signal();
@@ -117,7 +118,7 @@ public class FairUnifanBathroom {
         // Called when a UT fan wants to leave bathroom
         monitorLock.lock();
         try {
-            System.out.println("UT left bathroom");
+            //System.out.println("UT left bathroom");
             count--;
             if (count == size-1) {
                 notFull.signal();
@@ -134,7 +135,7 @@ public class FairUnifanBathroom {
         // Called when a OU fan wants to leave bathroom
         monitorLock.lock();
         try {
-            System.out.println("OU left bathroom");
+            //System.out.println("OU left bathroom");
             count--;
             if (count == size-1) {
                 notFull.signal();

@@ -1,13 +1,12 @@
 import java.io.*;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BookServer {
   static AtomicInteger recordID = new AtomicInteger(1);
-  static List<InventoryEntry> inventory = Collections.synchronizedList(new ArrayList<InventoryEntry>());
-  static List<BorrowEntry> records = Collections.synchronizedList(new ArrayList<BorrowEntry>());
+  static final List<InventoryEntry> inventory = Collections.synchronizedList(new ArrayList<InventoryEntry>());
+  static final List<BorrowEntry> records = Collections.synchronizedList(new ArrayList<BorrowEntry>());
 
   public static class InventoryEntry {
     String bookName;
@@ -103,30 +102,38 @@ public class BookServer {
               bookName.append(" ").append(tokens[i]);
             }
             // check inventory for book
-            InventoryEntry libraryBook = findBook(bookName.toString().toString());
-            if (libraryBook == null) {
-              response = "Request Failed - We do not have this book";
-            } else if (libraryBook.quantity == 0) {
-              response = "Request Failed - Book not available";
-            } else {
-              // Book available, create record and update inventory
-              int rid = recordID.getAndIncrement();
-              records.add(new BorrowEntry(rid, studentName, bookName.toString().toString()));
-              libraryBook.quantity--;
-              response = "Your request has been approved, " + rid + " " + studentName + " " + bookName;
+            synchronized (inventory) {
+              synchronized (records) {
+                InventoryEntry libraryBook = findBook(bookName.toString().toString());
+                if (libraryBook == null) {
+                  response = "Request Failed - We do not have this book";
+                } else if (libraryBook.quantity == 0) {
+                  response = "Request Failed - Book not available";
+                } else {
+                  // Book available, create record and update inventory
+                  int rid = recordID.getAndIncrement();
+                  records.add(new BorrowEntry(rid, studentName, bookName.toString().toString()));
+                  libraryBook.quantity--;
+                  response = "Your request has been approved, " + rid + " " + studentName + " " + bookName;
+                }
+              }
             }
           } else if (tokens[0].equals("return")) {
             int rid = Integer.parseInt(tokens[1]);
             // check records
-            BorrowEntry borrowedBook = findRecord(rid);
-            if (borrowedBook == null) {
-              response = rid + " not found, no such borrow record";
-            } else {
-              // borrow record found, remove record and update inventory
-              InventoryEntry libraryBook = findBook(borrowedBook.bookName);
-              libraryBook.quantity++;
-              records.remove(borrowedBook);
-              response = rid + " is returned";
+            synchronized (inventory) {
+              synchronized (records) {
+                BorrowEntry borrowedBook = findRecord(rid);
+                if (borrowedBook == null) {
+                  response = rid + " not found, no such borrow record";
+                } else {
+                  // borrow record found, remove record and update inventory
+                  InventoryEntry libraryBook = findBook(borrowedBook.bookName);
+                  libraryBook.quantity++;
+                  records.remove(borrowedBook);
+                  response = rid + " is returned";
+                }
+              }
             }
           } else if (tokens[0].equals("list")) {
             String studentName = tokens[1];
@@ -207,30 +214,38 @@ public class BookServer {
               bookName.append(" ").append(tokens[i]);
             }
             // check inventory for book
-            InventoryEntry libraryBook = findBook(bookName.toString().toString());
-            if (libraryBook == null) {
-              pout.println("Request Failed - We do not have this book");
-            } else if (libraryBook.quantity == 0) {
-              pout.println("Request Failed - Book not available");
-            } else {
-              // Book available, create record and update inventory
-              int rid = recordID.getAndIncrement();
-              records.add(new BorrowEntry(rid, studentName, bookName.toString().toString()));
-              libraryBook.quantity--;
-              pout.println("Your request has been approved, " + rid + " " + studentName + " " + bookName);
+            synchronized (inventory) {
+              synchronized (records) {
+                InventoryEntry libraryBook = findBook(bookName.toString().toString());
+                if (libraryBook == null) {
+                  pout.println("Request Failed - We do not have this book");
+                } else if (libraryBook.quantity == 0) {
+                  pout.println("Request Failed - Book not available");
+                } else {
+                  // Book available, create record and update inventory
+                  int rid = recordID.getAndIncrement();
+                  records.add(new BorrowEntry(rid, studentName, bookName.toString().toString()));
+                  libraryBook.quantity--;
+                  pout.println("Your request has been approved, " + rid + " " + studentName + " " + bookName);
+                }
+              }
             }
           } else if (tokens[0].equals("return")) {
             int rid = Integer.parseInt(tokens[1]);
             // check records
-            BorrowEntry borrowedBook = findRecord(rid);
-            if (borrowedBook == null) {
-              pout.println(rid + " not found, no such borrow record");
-            } else {
-              // borrow record found, remove record and update inventory
-              InventoryEntry libraryBook = findBook(borrowedBook.bookName);
-              libraryBook.quantity++;
-              records.remove(borrowedBook);
-              pout.println(rid + " is returned");
+            synchronized (inventory) {
+              synchronized (records) {
+                BorrowEntry borrowedBook = findRecord(rid);
+                if (borrowedBook == null) {
+                  pout.println(rid + " not found, no such borrow record");
+                } else {
+                  // borrow record found, remove record and update inventory
+                  InventoryEntry libraryBook = findBook(borrowedBook.bookName);
+                  libraryBook.quantity++;
+                  records.remove(borrowedBook);
+                  pout.println(rid + " is returned");
+                }
+              }
             }
           } else if (tokens[0].equals("list")) {
             String studentName = tokens[1];

@@ -277,6 +277,7 @@ public class BookServer {
             for (InventoryEntry ie : inventory) {
               pout.println(ie.bookName + " " + ie.quantity);
             }
+            pout.flush();
             theClient.close();
             break;
           }
